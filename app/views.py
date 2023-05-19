@@ -1,35 +1,24 @@
-import uuid
-from typing import Annotated
 import os
 import shutil
+import uuid
+
+from pathlib import Path
 from pydub import AudioSegment
-from fastapi import APIRouter, Depends, Security, Body, BackgroundTasks, UploadFile, Request, status, Form
+from typing import Annotated
+
+from fastapi import APIRouter, Security, BackgroundTasks, UploadFile, Request, status, Form, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pathlib import Path
-
-
 
 from .dbaccessor import DBAccessor
 from .models import UserCreate, User
 from .auth import Auth
-from .config import Settings
 
 
 api = APIRouter()
 
 security = HTTPBearer()
 auth_handler = Auth()
-
-
-
-# User request to internal API
-@api.post("/login")
-async def qnt_questions(user: UserCreate) -> dict:
-    access_token = auth_handler.encode_token(user.username)
-    db_accessor = DBAccessor()
-    cur_user: User = await db_accessor.save_user_to_db(user, access_token)
-    return {"uuid": cur_user.user_id, "access_token": access_token, }
 
 
 async def wav_to_mp3(filename: Path):
@@ -41,8 +30,19 @@ async def wav_to_mp3(filename: Path):
     os.remove(filename)
 
 
+# User request to internal API
+@api.post("/login")
+async def qnt_questions(user: UserCreate) -> dict:
+    access_token = auth_handler.encode_token(user.username)
+    db_accessor = DBAccessor()
+    cur_user: User = await db_accessor.save_user_to_db(user, access_token)
+    return {"uuid": cur_user.user_id, "access_token": access_token, }
+
+
+# Uploading wav-file to server
 @api.post("/record")
-async def add_track(r: Request, user_id: Annotated[str, Form()], upload_file: UploadFile, background_tasks: BackgroundTasks, credentials: HTTPAuthorizationCredentials = Security(security)):
+async def add_track(r: Request, user_id: Annotated[str, Form()], upload_file: UploadFile,
+                    background_tasks: BackgroundTasks, credentials: HTTPAuthorizationCredentials = Security(security)):
     token = credentials.credentials
     user_id = uuid.UUID(user_id)
     if auth_handler.decode_token(token):
@@ -61,9 +61,13 @@ async def add_track(r: Request, user_id: Annotated[str, Form()], upload_file: Up
         # http://host:port/record?id=id_записи&user=id_пользователя.
         return {"url": f"{r.url}?id={filename}&user={user_id}"}
     else:
-        return {"Invalid token"}
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invalid Token"
+        )
 
 
+# Downloading mp3 file from server
 @api.get("/record")
 async def response_file(id: uuid.UUID, user: uuid.UUID):
     db_accessor = DBAccessor()
@@ -73,4 +77,7 @@ async def response_file(id: uuid.UUID, user: uuid.UUID):
                             filename="bewise.mp3",
                             media_type="application/octet-stream")
     else:
-        return status.HTTP_404_NOT_FOUND
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Incorrect data"
+        )

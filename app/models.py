@@ -7,13 +7,14 @@ import uuid
 
 Base = declarative_base()
 
-
+# Pydantic model for creating user
 class UserCreate(BaseModel):
     username: str = Field(min_length=1)
     user_id: uuid.UUID | None = None
     disabled: bool = False
 
 
+# Dataclass model for user
 @dataclass
 class User:
     user_id: uuid.UUID
@@ -24,6 +25,7 @@ class User:
     tracks: list["Track"] = field(default_factory=list)
 
 
+# Dataclass model for track
 @dataclass
 class Track:
     track_id: uuid.UUID
@@ -31,6 +33,7 @@ class Track:
     user_id: uuid.UUID
 
 
+# ORM model for User
 class UserModel(Base):
     __tablename__ = "users"
 
@@ -50,6 +53,7 @@ class UserModel(Base):
                     tracks=[track.to_dc() for track in self.tracks])
 
 
+# ORM model for Track
 class TrackModel(Base):
     __tablename__ = "tracks"
 

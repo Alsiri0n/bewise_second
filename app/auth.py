@@ -6,10 +6,12 @@ from fastapi import HTTPException
 from .config import Settings
 
 
+# Auxiliary class for auth work
 class Auth:
     hasher = CryptContext(schemes="bcrypt")
     secret = Settings().secret_key
 
+    # Create token
     def encode_token(self, username: str) -> str:
         payload = {
             'exp': int(datetime.timestamp(datetime.utcnow() + timedelta(days=0, minutes=300))),
@@ -19,6 +21,7 @@ class Auth:
         }
         return jwt.encode(payload, self.secret, algorithm="HS256")
 
+    # Check token
     def decode_token(self, access_token: str) -> str:
         try:
             payload = jwt.decode(access_token, self.secret, algorithms="HS256")
