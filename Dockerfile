@@ -2,7 +2,7 @@ FROM python:3.11
 RUN useradd bewise
 RUN apt-get -y update
 RUN apt-get install -y ffmpeg
-RUN mkdir -p /usr/src/app/bewise_second
+RUN mkdir -p /usr/src/app/bewise_second/app/tracks
 WORKDIR /usr/src/app/bewise_second
 COPY . /usr/src/app/bewise_second/
 RUN pip3 install poetry
