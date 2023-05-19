@@ -7,3 +7,5 @@ __pycache__/
 config.yaml
 config_test.yaml
 .env.test
+*.mp3
+*.wav
